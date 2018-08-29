@@ -155,7 +155,7 @@ handle_event(_Event, _Args, _Config) -> ok.
 %%% Private functions
 %%%===================================================================
 
-handle_full_response(Type, [Req, Code, _Hs, _B, {Timings, Sizes}], _Config) ->
+handle_full_response(Type, [Req, Code, _Hs, _B, {Timings, Sizes}], _Config) when is_integer(Code) ->
   Path = elli_prometheus_config:path(),
   case {elli_request:method(Req), elli_request:raw_path(Req)} of
     {'GET', Path} -> ok;
@@ -186,7 +186,11 @@ handle_full_response(Type, [Req, Code, _Hs, _B, {Timings, Sizes}], _Config) ->
       prometheus_summary:observe(?RESPONSE_BODY_SIZE, TypedLabels,
                                  size(Sizes, response_body)),
       ok
-  end.
+  end;
+handle_full_response(_Type, [_Req, _Code, _Hs, _B, {_Timings, _Sizes}], _Config) ->
+  %% ignore cases response could contain non HTTP status code
+  %% eg `handover` for websocket protocol upgrade
+  ok.
 
 count_failed_request(Reason) ->
   prometheus_counter:inc(?FAILED_TOTAL, [Reason]).
